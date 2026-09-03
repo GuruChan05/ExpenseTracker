@@ -1,10 +1,10 @@
 from flask import (
     Flask,
     render_template,
+    request,
     redirect,
     url_for,
-    flash,
-    request
+    flash
 )
 
 import os
@@ -25,55 +25,18 @@ app.secret_key = os.getenv(
     "expense-tracker-secret"
 )
 
-# ==================================================
-# UPLOAD FOLDER (LOCAL + VERCEL)
-# ==================================================
-
-if os.getenv("VERCEL"):
-    UPLOAD_FOLDER = os.path.join(
-        tempfile.gettempdir(),
-        "uploads"
-    )
-else:
-    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    UPLOAD_FOLDER = os.path.join(
-        BASE_DIR,
-        "uploads"
-    )
-
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-
-app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
-
-# ==================================================
-# HOME PAGE
-# ==================================================
+# ==========================================
+# DASHBOARD
+# ==========================================
 
 @app.route("/")
 def dashboard():
 
-    try:
+    initialize_database()
 
-        initialize_database()
+    stats = get_dashboard_stats()
 
-        stats = get_dashboard_stats()
-
-        last_update = get_last_update()
-
-    except Exception as error:
-
-        print("Dashboard Error:", error)
-
-        stats = {
-            "total_expenses": 0,
-            "total_transactions": 0,
-            "gpay_total": 0,
-            "gmail_total": 0,
-            "category_totals": [],
-            "monthly_totals": []
-        }
-
-        last_update = None
+    last_update = get_last_update()
 
     return render_template(
         "dashboard.html",
@@ -81,104 +44,72 @@ def dashboard():
         last_update=last_update
     )
 
-# ==================================================
-# CSV UPLOAD
-# ==================================================
+# ==========================================
+# UPLOAD + UPDATE (ONE REQUEST)
+# ==========================================
 
-@app.route("/upload", methods=["POST"])
-def upload_csv():
+@app.route("/update", methods=["POST"])
+def update():
 
     file = request.files.get("csv_file")
 
     if file is None or file.filename == "":
 
         flash(
-            "Please select a CSV file.",
+            "Please choose a Google Pay CSV.",
             "error"
         )
 
         return redirect(url_for("dashboard"))
 
-    save_path = os.path.join(
-        app.config["UPLOAD_FOLDER"],
+    upload_dir = os.path.join(
+        tempfile.gettempdir(),
+        "uploads"
+    )
+
+    os.makedirs(upload_dir, exist_ok=True)
+
+    csv_path = os.path.join(
+        upload_dir,
         "Transactions.csv"
     )
 
-    file.save(save_path)
+    file.save(csv_path)
 
-    flash(
-        "Google Pay CSV uploaded successfully!",
-        "success"
-    )
+    success = run_update(csv_path)
 
-    return redirect(url_for("dashboard"))
-
-# ==================================================
-# UPDATE EXPENSES
-# ==================================================
-
-@app.route("/update", methods=["POST"])
-def update():
-
-    try:
-
-        initialize_database()
-
-        success = run_update()
-
-        if success:
-
-            flash(
-                "Expenses updated successfully!",
-                "success"
-            )
-
-        else:
-
-            flash(
-                "No new transactions found.",
-                "error"
-            )
-
-    except Exception as error:
-
-        print("Update Error:", error)
+    if success:
 
         flash(
-            str(error),
-            "error"
+            "New transactions imported successfully!",
+            "success"
+        )
+
+    else:
+
+        flash(
+            "No new transactions found.",
+            "warning"
         )
 
     return redirect(url_for("dashboard"))
 
-# ==================================================
-# HEALTH CHECK
-# ==================================================
+# ==========================================
+# HEALTH
+# ==========================================
 
 @app.route("/health")
 def health():
 
     return {
-        "status": "running",
-        "platform": "vercel"
-        if os.getenv("VERCEL")
-        else "local"
+        "status": "running"
     }
 
-# ==================================================
-# LOCAL RUN
-# ==================================================
+# ==========================================
 
 if __name__ == "__main__":
 
     initialize_database()
-
-    print("=" * 40)
-    print("EXPENSE TRACKER WEB APP")
-    print("=" * 40)
-    print("Upload Folder:", UPLOAD_FOLDER)
-    print("http://127.0.0.1:5000")
-    print("=" * 40)
 
     app.run(
         host="0.0.0.0",
