@@ -1,0 +1,711 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0">
+
+<title>Personal Expense Tracker</title>
+
+<style>
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background: #f4f6f8;
+    color: #222;
+}
+
+.container {
+    max-width: 1250px;
+    margin: auto;
+    padding: 40px 25px;
+}
+
+.header {
+    text-align: center;
+    margin-bottom: 35px;
+}
+
+.header h1 {
+    font-size: 36px;
+    margin-bottom: 8px;
+}
+
+.header p {
+    color: #666;
+    font-size: 16px;
+}
+
+/* --------------------------------
+   TOTAL SPENDING
+-------------------------------- */
+
+.total-card {
+    background: white;
+    border-radius: 18px;
+    padding: 40px;
+    margin-bottom: 30px;
+    text-align: center;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+}
+
+.total-label {
+    font-size: 20px;
+    color: #666;
+    margin-bottom: 12px;
+}
+
+.total {
+    font-size: 64px;
+    font-weight: 800;
+    margin: 5px 0 15px;
+}
+
+.total-description {
+    color: #777;
+    font-size: 15px;
+}
+
+/* --------------------------------
+   CARDS
+-------------------------------- */
+
+.card {
+    background: white;
+    padding: 30px;
+    margin-bottom: 30px;
+    border-radius: 16px;
+    box-shadow: 0 3px 15px rgba(0,0,0,0.06);
+}
+
+.card h2 {
+    margin-top: 0;
+    margin-bottom: 20px;
+    font-size: 24px;
+}
+
+/* --------------------------------
+   TABLE
+-------------------------------- */
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+th,
+td {
+    padding: 14px;
+    border-bottom: 1px solid #e5e5e5;
+    text-align: left;
+}
+
+th {
+    background: #f5f5f5;
+    font-weight: bold;
+}
+
+tr:hover {
+    background: #fafafa;
+}
+
+/* --------------------------------
+   CHART
+-------------------------------- */
+
+.chart {
+    text-align: center;
+}
+
+.chart img {
+    max-width: 100%;
+    width: 800px;
+    margin-top: 10px;
+}
+
+/* --------------------------------
+   FOOTER
+-------------------------------- */
+
+.footer {
+    text-align: center;
+    color: #777;
+    padding: 20px;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+    <!-- HEADER -->
+
+    <div class="header">
+
+        <h1>Personal Expense Tracker</h1>
+
+        <p>
+            Google Pay and Gmail transaction analysis
+        </p>
+
+    </div>
+
+
+    <!-- TOTAL SPENDING -->
+
+    <div class="total-card">
+
+        <div class="total-label">
+            Total Spending
+        </div>
+
+        <div class="total">
+            ₹4,088.68
+        </div>
+
+        <div class="total-description">
+
+            Total Transactions:
+            <strong>44</strong>
+
+        </div>
+
+    </div>
+
+
+    <!-- MONTHLY SPENDING -->
+
+    <div class="card">
+
+        <h2>Monthly Spending</h2>
+
+        <table>
+
+            <tr>
+                <th>Month</th>
+                <th>Total Spending</th>
+            </tr>
+
+            
+        <tr>
+            <td>April 2025</td>
+            <td>₹748.50</td>
+        </tr>
+        
+        <tr>
+            <td>August 2024</td>
+            <td>₹426.40</td>
+        </tr>
+        
+        <tr>
+            <td>December 2023</td>
+            <td>₹226.28</td>
+        </tr>
+        
+        <tr>
+            <td>December 2025</td>
+            <td>₹91.00</td>
+        </tr>
+        
+        <tr>
+            <td>February 2025</td>
+            <td>₹136.50</td>
+        </tr>
+        
+        <tr>
+            <td>February 2026</td>
+            <td>₹784.50</td>
+        </tr>
+        
+        <tr>
+            <td>January 2026</td>
+            <td>₹9.00</td>
+        </tr>
+        
+        <tr>
+            <td>July 2025</td>
+            <td>₹82.00</td>
+        </tr>
+        
+        <tr>
+            <td>July 2026</td>
+            <td>₹10.00</td>
+        </tr>
+        
+        <tr>
+            <td>June 2025</td>
+            <td>₹192.00</td>
+        </tr>
+        
+        <tr>
+            <td>June 2026</td>
+            <td>₹15.00</td>
+        </tr>
+        
+        <tr>
+            <td>March 2025</td>
+            <td>₹60.00</td>
+        </tr>
+        
+        <tr>
+            <td>May 2026</td>
+            <td>₹391.00</td>
+        </tr>
+        
+        <tr>
+            <td>November 2023</td>
+            <td>₹327.00</td>
+        </tr>
+        
+        <tr>
+            <td>November 2025</td>
+            <td>₹85.00</td>
+        </tr>
+        
+        <tr>
+            <td>October 2023</td>
+            <td>₹227.50</td>
+        </tr>
+        
+        <tr>
+            <td>October 2024</td>
+            <td>₹56.00</td>
+        </tr>
+        
+        <tr>
+            <td>October 2025</td>
+            <td>₹3.00</td>
+        </tr>
+        
+        <tr>
+            <td>September 2024</td>
+            <td>₹180.00</td>
+        </tr>
+        
+        <tr>
+            <td>Unknown</td>
+            <td>₹38.00</td>
+        </tr>
+        
+
+        </table>
+
+    </div>
+
+
+    <!-- CATEGORY SPENDING -->
+
+    <div class="card">
+
+        <h2>Spending by Category</h2>
+
+        <table>
+
+            <tr>
+                <th>Category</th>
+                <th>Total Spending</th>
+            </tr>
+
+            
+        <tr>
+            <td>Groceries</td>
+            <td>₹3,160.18</td>
+        </tr>
+        
+        <tr>
+            <td>Transport</td>
+            <td>₹801.50</td>
+        </tr>
+        
+        <tr>
+            <td>Other</td>
+            <td>₹121.00</td>
+        </tr>
+        
+        <tr>
+            <td>Shopping</td>
+            <td>₹3.00</td>
+        </tr>
+        
+        <tr>
+            <td>Bills</td>
+            <td>₹3.00</td>
+        </tr>
+        
+
+        </table>
+
+    </div>
+
+
+    <!-- CHART -->
+
+    <div class="card chart">
+
+        <h2>Expense Chart</h2>
+
+        <img
+            src="category_chart.png"
+            alt="Spending by Category"
+        >
+
+    </div>
+
+
+    <!-- TRANSACTIONS -->
+
+    <div class="card">
+
+        <h2>All Transactions</h2>
+
+        <table>
+
+            <tr>
+                <th>Date</th>
+                <th>Merchant</th>
+                <th>Amount</th>
+                <th>Category</th>
+            </tr>
+
+            
+        <tr>
+            <td>Dec 5, 2025, 2:11 AM</td>
+            <td>Special Airdrop 1350 (Free Fire MAX)</td>
+            <td>₹9.00</td>
+            <td>Other</td>
+        </tr>
+        
+        <tr>
+            <td>Nov 4, 2023, 11:31 AM</td>
+            <td>Special Airdrop 411 (Free Fire MAX)</td>
+            <td>₹29.00</td>
+            <td>Other</td>
+        </tr>
+        
+        <tr>
+            <td>2026-07-09</td>
+            <td>Unknown</td>
+            <td>₹5.00</td>
+            <td>Other</td>
+        </tr>
+        
+        <tr>
+            <td>2026-07-06</td>
+            <td>Unknown</td>
+            <td>₹5.00</td>
+            <td>Other</td>
+        </tr>
+        
+        <tr>
+            <td>2026-06-30</td>
+            <td>Unknown</td>
+            <td>₹5.00</td>
+            <td>Other</td>
+        </tr>
+        
+        <tr>
+            <td>2026-06-26</td>
+            <td>Unknown</td>
+            <td>₹5.00</td>
+            <td>Other</td>
+        </tr>
+        
+        <tr>
+            <td>2026-06-15</td>
+            <td>Unknown</td>
+            <td>₹5.00</td>
+            <td>Other</td>
+        </tr>
+        
+        <tr>
+            <td>2026-05-16</td>
+            <td>BigBasket</td>
+            <td>₹142.50</td>
+            <td>Groceries</td>
+        </tr>
+        
+        <tr>
+            <td>2026-05-14</td>
+            <td>BigBasket</td>
+            <td>₹90.50</td>
+            <td>Groceries</td>
+        </tr>
+        
+        <tr>
+            <td>2026-05-15</td>
+            <td>BigBasket</td>
+            <td>₹151.00</td>
+            <td>Groceries</td>
+        </tr>
+        
+        <tr>
+            <td>2026-05-11</td>
+            <td>Ola</td>
+            <td>₹7.00</td>
+            <td>Transport</td>
+        </tr>
+        
+        <tr>
+            <td>2026-02-08</td>
+            <td>BigBasket</td>
+            <td>₹261.50</td>
+            <td>Groceries</td>
+        </tr>
+        
+        <tr>
+            <td>2026-02-08</td>
+            <td>BigBasket</td>
+            <td>₹423.20</td>
+            <td>Groceries</td>
+        </tr>
+        
+        <tr>
+            <td>2026-02-11</td>
+            <td>Ola</td>
+            <td>₹8.00</td>
+            <td>Transport</td>
+        </tr>
+        
+        <tr>
+            <td>2026-02-01</td>
+            <td>BigBasket</td>
+            <td>₹91.80</td>
+            <td>Groceries</td>
+        </tr>
+        
+        <tr>
+            <td>2026-01-19</td>
+            <td>Amazon</td>
+            <td>₹3.00</td>
+            <td>Shopping</td>
+        </tr>
+        
+        <tr>
+            <td>2026-01-15</td>
+            <td>Ola</td>
+            <td>₹6.00</td>
+            <td>Transport</td>
+        </tr>
+        
+        <tr>
+            <td>2025-12-12</td>
+            <td>BigBasket</td>
+            <td>₹82.00</td>
+            <td>Groceries</td>
+        </tr>
+        
+        <tr>
+            <td>2025-12-05</td>
+            <td>PhonePe</td>
+            <td>₹9.00</td>
+            <td>Other</td>
+        </tr>
+        
+        <tr>
+            <td>2025-11-19</td>
+            <td>BigBasket</td>
+            <td>₹82.00</td>
+            <td>Groceries</td>
+        </tr>
+        
+        <tr>
+            <td>2025-11-17</td>
+            <td>Ola</td>
+            <td>₹3.00</td>
+            <td>Transport</td>
+        </tr>
+        
+        <tr>
+            <td>2025-10-15</td>
+            <td>Jio</td>
+            <td>₹3.00</td>
+            <td>Bills</td>
+        </tr>
+        
+        <tr>
+            <td>2025-07-18</td>
+            <td>BigBasket</td>
+            <td>₹82.00</td>
+            <td>Groceries</td>
+        </tr>
+        
+        <tr>
+            <td>2025-06-20</td>
+            <td>Unknown</td>
+            <td>₹3.00</td>
+            <td>Other</td>
+        </tr>
+        
+        <tr>
+            <td>2025-06-13</td>
+            <td>BigBasket</td>
+            <td>₹72.00</td>
+            <td>Groceries</td>
+        </tr>
+        
+        <tr>
+            <td>2025-06-09</td>
+            <td>BigBasket</td>
+            <td>₹100.00</td>
+            <td>Groceries</td>
+        </tr>
+        
+        <tr>
+            <td>2025-06-13</td>
+            <td>Unknown</td>
+            <td>₹17.00</td>
+            <td>Other</td>
+        </tr>
+        
+        <tr>
+            <td>2025-04-11</td>
+            <td>Ola</td>
+            <td>₹374.25</td>
+            <td>Transport</td>
+        </tr>
+        
+        <tr>
+            <td>2025-04-10</td>
+            <td>Ola</td>
+            <td>₹374.25</td>
+            <td>Transport</td>
+        </tr>
+        
+        <tr>
+            <td>2025-03-10</td>
+            <td>BigBasket</td>
+            <td>₹60.00</td>
+            <td>Groceries</td>
+        </tr>
+        
+        <tr>
+            <td>2025-02-22</td>
+            <td>BigBasket</td>
+            <td>₹136.50</td>
+            <td>Groceries</td>
+        </tr>
+        
+        <tr>
+            <td>2024-10-20</td>
+            <td>BigBasket</td>
+            <td>₹56.00</td>
+            <td>Groceries</td>
+        </tr>
+        
+        <tr>
+            <td>2024-09-11</td>
+            <td>BigBasket</td>
+            <td>₹180.00</td>
+            <td>Groceries</td>
+        </tr>
+        
+        <tr>
+            <td>2024-08-17</td>
+            <td>BigBasket</td>
+            <td>₹137.00</td>
+            <td>Groceries</td>
+        </tr>
+        
+        <tr>
+            <td>2024-08-12</td>
+            <td>Ola</td>
+            <td>₹29.00</td>
+            <td>Transport</td>
+        </tr>
+        
+        <tr>
+            <td>2024-08-17</td>
+            <td>BigBasket</td>
+            <td>₹130.20</td>
+            <td>Groceries</td>
+        </tr>
+        
+        <tr>
+            <td>2024-08-16</td>
+            <td>BigBasket</td>
+            <td>₹130.20</td>
+            <td>Groceries</td>
+        </tr>
+        
+        <tr>
+            <td>2023-11-26</td>
+            <td>BigBasket</td>
+            <td>₹149.00</td>
+            <td>Groceries</td>
+        </tr>
+        
+        <tr>
+            <td>2023-12-02</td>
+            <td>BigBasket</td>
+            <td>₹149.00</td>
+            <td>Groceries</td>
+        </tr>
+        
+        <tr>
+            <td>2023-10-18</td>
+            <td>BigBasket</td>
+            <td>₹127.50</td>
+            <td>Groceries</td>
+        </tr>
+        
+        <tr>
+            <td>2023-11-29</td>
+            <td>BigBasket</td>
+            <td>₹149.00</td>
+            <td>Groceries</td>
+        </tr>
+        
+        <tr>
+            <td>2023-12-01</td>
+            <td>BigBasket</td>
+            <td>₹77.28</td>
+            <td>Groceries</td>
+        </tr>
+        
+        <tr>
+            <td>2023-11-04</td>
+            <td>Google Pay</td>
+            <td>₹29.00</td>
+            <td>Other</td>
+        </tr>
+        
+        <tr>
+            <td>2023-10-28</td>
+            <td>BigBasket</td>
+            <td>₹100.00</td>
+            <td>Groceries</td>
+        </tr>
+        
+
+        </table>
+
+    </div>
+
+
+    <!-- FOOTER -->
+
+    <div class="footer">
+
+        Expense Tracker • Personal Financial Analysis
+
+    </div>
+
+</div>
+
+</body>
+
+</html>

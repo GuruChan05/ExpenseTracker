@@ -1,0 +1,15 @@
+venv/
+__pycache__/
+*.pyc
+
+.env
+
+expense_tracker.db
+
+data/gmail.mbox
+data/*.csv
+
+credentials.json
+token.json
+
+.vscode/

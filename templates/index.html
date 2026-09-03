@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>Expense Tracker</title>
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+
+            margin: 0;
+
+            font-family:
+                Arial,
+                sans-serif;
+
+            background:
+                #f4f6f8;
+
+            color:
+                #222;
+        }
+
+        .container {
+
+            width: 90%;
+
+            max-width: 1000px;
+
+            margin: 50px auto;
+        }
+
+        .header {
+
+            background:
+                white;
+
+            padding: 30px;
+
+            border-radius: 15px;
+
+            box-shadow:
+                0 4px 15px
+                rgba(0,0,0,0.08);
+
+            text-align: center;
+        }
+
+        h1 {
+
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+
+            color:
+                #666;
+        }
+
+        .button {
+
+            display: inline-block;
+
+            margin-top: 20px;
+
+            padding:
+                14px 25px;
+
+            background:
+                #111827;
+
+            color:
+                white;
+
+            text-decoration: none;
+
+            border-radius: 8px;
+
+            font-weight: bold;
+        }
+
+        .button:hover {
+
+            background:
+                #374151;
+        }
+
+        .success {
+
+            margin-top: 20px;
+
+            padding: 15px;
+
+            background:
+                #dcfce7;
+
+            color:
+                #166534;
+
+            border-radius: 8px;
+        }
+
+        .error {
+
+            margin-top: 20px;
+
+            padding: 15px;
+
+            background:
+                #fee2e2;
+
+            color:
+                #991b1b;
+
+            border-radius: 8px;
+        }
+
+        .cards {
+
+            display: flex;
+
+            gap: 20px;
+
+            margin-top: 30px;
+
+            flex-wrap: wrap;
+        }
+
+        .card {
+
+            background:
+                white;
+
+            padding: 25px;
+
+            border-radius: 12px;
+
+            flex: 1;
+
+            min-width: 250px;
+
+            box-shadow:
+                0 4px 15px
+                rgba(0,0,0,0.08);
+        }
+
+        .card h3 {
+
+            margin-top: 0;
+        }
+
+        pre {
+
+            background:
+                #111827;
+
+            color:
+                #e5e7eb;
+
+            padding: 20px;
+
+            border-radius: 10px;
+
+            overflow-x: auto;
+
+            margin-top: 30px;
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+<div class="container">
+
+    <div class="header">
+
+        <h1>
+            💰 Expense Tracker
+        </h1>
+
+        <p class="subtitle">
+            Google Pay + Gmail Payment Analyzer
+        </p>
+
+        <p>
+            Generate your latest expense report
+            whenever you need it.
+        </p>
+
+        <a
+            href="/generate"
+            class="button"
+        >
+            Generate Expense Report
+        </a>
+
+    </div>
+
+
+    {% if success %}
+
+    <div class="success">
+
+        <strong>
+            Report generated successfully!
+        </strong>
+
+        <br><br>
+
+        <a href="/report">
+            Open Expense Report
+        </a>
+
+    </div>
+
+    {% endif %}
+
+
+    {% if error %}
+
+    <div class="error">
+
+        <strong>
+            Error:
+        </strong>
+
+        <pre>{{ error }}</pre>
+
+    </div>
+
+    {% endif %}
+
+
+    {% if output %}
+
+    <div class="card">
+
+        <h3>
+            Processing Output
+        </h3>
+
+        <pre>{{ output }}</pre>
+
+    </div>
+
+    {% endif %}
+
+
+    <div class="cards">
+
+        <div class="card">
+
+            <h3>
+                📊 Google Pay
+            </h3>
+
+            <p>
+                Reads your Google Pay
+                transaction CSV.
+            </p>
+
+        </div>
+
+
+        <div class="card">
+
+            <h3>
+                📧 Gmail
+            </h3>
+
+            <p>
+                Extracts genuine
+                payment confirmation emails.
+            </p>
+
+        </div>
+
+
+        <div class="card">
+
+            <h3>
+                🤖 AI Categorization
+            </h3>
+
+            <p>
+                Categorizes transactions
+                into expense categories.
+            </p>
+            <form action="/update" method="POST">
+
+               <button type="submit">
+                     🔄 Update Expenses
+               </button>
+
+            </form>
+
+        </div>
+
+    </div>
+
+</div>
+
+</body>
+
+</html>
