@@ -17,7 +17,7 @@ from database import (
 from categorizer import categorize_transaction
 
 
-CSV_FILE = "data/Transactions.csv"
+CSV_FILE = "uploads/Transactions.csv"
 GMAIL_FILE = "data/gmail.mbox"
 
 
