@@ -17,26 +17,24 @@ app.secret_key = os.getenv(
 )
 
 
-# ==========================================
+# ======================================
 # HOME PAGE
-# ==========================================
+# ======================================
 
 @app.route("/")
 def dashboard():
 
     try:
 
-        # Create database & tables
         initialize_database()
 
-        # Load dashboard data
         stats = get_dashboard_stats()
 
         last_update = get_last_update()
 
-    except Exception as error:
+    except Exception as e:
 
-        print("Dashboard Error:", error)
+        print("Dashboard Error:", e)
 
         stats = {
             "total_expenses": 0,
@@ -56,25 +54,23 @@ def dashboard():
     )
 
 
-# ==========================================
+# ======================================
 # UPDATE BUTTON
-# ==========================================
+# ======================================
 
 @app.route("/update", methods=["POST"])
 def update():
 
-    print("\n====================================")
-    print("MANUAL UPDATE REQUESTED")
-    print("====================================")
-
     try:
+
+        initialize_database()
 
         success = run_update()
 
         if success:
 
             flash(
-                "Expense data updated successfully!",
+                "Expenses updated successfully!",
                 "success"
             )
 
@@ -85,43 +81,37 @@ def update():
                 "error"
             )
 
-    except Exception as error:
+    except Exception as e:
 
-        print("Update Error:", error)
+        print("Update Error:", e)
 
         flash(
-            f"Update failed: {error}",
+            str(e),
             "error"
         )
 
     return redirect(url_for("dashboard"))
 
 
-# ==========================================
-# HEALTH CHECK
-# ==========================================
+# ======================================
+# HEALTH
+# ======================================
 
 @app.route("/health")
 def health():
 
     return {
-        "status": "running",
-        "platform": "vercel" if os.getenv("VERCEL") else "local"
+        "status": "running"
     }
 
 
-# ==========================================
-# RUN LOCALLY
-# ==========================================
+# ======================================
+# LOCAL RUN
+# ======================================
 
 if __name__ == "__main__":
 
-    print("====================================")
-    print("   EXPENSE TRACKER WEB APP")
-    print("====================================")
-    print("Starting Flask server...")
-    print("Open: http://127.0.0.1:5000")
-    print("====================================")
+    initialize_database()
 
     app.run(
         host="0.0.0.0",
