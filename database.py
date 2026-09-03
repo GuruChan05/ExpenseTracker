@@ -2,12 +2,15 @@ import sqlite3
 import os
 from datetime import datetime
 
-DATABASE = "expense_tracker.db"
+# Use writable storage on Vercel
+if os.getenv("VERCEL"):
+    DATABASE = "/tmp/expense_tracker.db"
+else:
+    DATABASE = "expense_tracker.db"
 
 
 def get_connection():
     return sqlite3.connect(DATABASE)
-
 
 # ==========================================
 # CREATE DATABASE & TABLES
