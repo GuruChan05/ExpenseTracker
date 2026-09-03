@@ -8,6 +8,7 @@ from flask import (
 )
 
 import os
+import tempfile
 
 from update_expenses import run_update
 
@@ -24,14 +25,29 @@ app.secret_key = os.getenv(
     "expense-tracker-secret"
 )
 
-# Folder to store uploaded CSV
-UPLOAD_FOLDER = "uploads"
+# ==================================================
+# UPLOAD FOLDER (LOCAL + VERCEL)
+# ==================================================
+
+if os.getenv("VERCEL"):
+    UPLOAD_FOLDER = os.path.join(
+        tempfile.gettempdir(),
+        "uploads"
+    )
+else:
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    UPLOAD_FOLDER = os.path.join(
+        BASE_DIR,
+        "uploads"
+    )
+
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
+app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 
-# ==========================================
-# DASHBOARD
-# ==========================================
+# ==================================================
+# HOME PAGE
+# ==================================================
 
 @app.route("/")
 def dashboard():
@@ -65,30 +81,26 @@ def dashboard():
         last_update=last_update
     )
 
-
-# ==========================================
-# UPLOAD GOOGLE PAY CSV
-# ==========================================
+# ==================================================
+# CSV UPLOAD
+# ==================================================
 
 @app.route("/upload", methods=["POST"])
 def upload_csv():
 
-    if "csv_file" not in request.files:
+    file = request.files.get("csv_file")
 
-        flash("Please choose a CSV file.", "error")
+    if file is None or file.filename == "":
 
-        return redirect(url_for("dashboard"))
-
-    file = request.files["csv_file"]
-
-    if file.filename == "":
-
-        flash("No file selected.", "error")
+        flash(
+            "Please select a CSV file.",
+            "error"
+        )
 
         return redirect(url_for("dashboard"))
 
     save_path = os.path.join(
-        UPLOAD_FOLDER,
+        app.config["UPLOAD_FOLDER"],
         "Transactions.csv"
     )
 
@@ -99,21 +111,14 @@ def upload_csv():
         "success"
     )
 
-    print("CSV Saved:", save_path)
-
     return redirect(url_for("dashboard"))
 
-
-# ==========================================
+# ==================================================
 # UPDATE EXPENSES
-# ==========================================
+# ==================================================
 
 @app.route("/update", methods=["POST"])
 def update():
-
-    print("\n====================================")
-    print("MANUAL UPDATE REQUESTED")
-    print("====================================")
 
     try:
 
@@ -124,7 +129,7 @@ def update():
         if success:
 
             flash(
-                "Expense data updated successfully!",
+                "Expenses updated successfully!",
                 "success"
             )
 
@@ -140,40 +145,40 @@ def update():
         print("Update Error:", error)
 
         flash(
-            f"Update failed: {error}",
+            str(error),
             "error"
         )
 
     return redirect(url_for("dashboard"))
 
-
-# ==========================================
+# ==================================================
 # HEALTH CHECK
-# ==========================================
+# ==================================================
 
 @app.route("/health")
 def health():
 
     return {
         "status": "running",
-        "platform": "vercel" if os.getenv("VERCEL") else "local"
+        "platform": "vercel"
+        if os.getenv("VERCEL")
+        else "local"
     }
 
-
-# ==========================================
-# RUN LOCALLY
-# ==========================================
+# ==================================================
+# LOCAL RUN
+# ==================================================
 
 if __name__ == "__main__":
 
-    print("====================================")
-    print("   EXPENSE TRACKER WEB APP")
-    print("====================================")
-    print("Starting Flask Server...")
-    print("http://127.0.0.1:5000")
-    print("====================================")
-
     initialize_database()
+
+    print("=" * 40)
+    print("EXPENSE TRACKER WEB APP")
+    print("=" * 40)
+    print("Upload Folder:", UPLOAD_FOLDER)
+    print("http://127.0.0.1:5000")
+    print("=" * 40)
 
     app.run(
         host="0.0.0.0",

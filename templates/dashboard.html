@@ -121,6 +121,33 @@
 
     {% endwith %}
 
+    <h2>Upload Latest Google Pay CSV</h2>
+
+<form action="/upload" method="POST" enctype="multipart/form-data">
+
+    <input
+        type="file"
+        name="csv_file"
+        accept=".csv"
+        required
+    >
+
+    <button type="submit">
+        Upload CSV
+    </button>
+
+</form>
+
+<br>
+
+<form action="/update" method="POST">
+
+    <button type="submit">
+        Update Expenses
+    </button>
+
+</form>
+
 
     <!-- Statistics -->
 
