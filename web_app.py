@@ -1,7 +1,13 @@
 from flask import Flask, render_template, redirect, url_for, flash
-from update_expenses import run_update
-from database import get_dashboard_stats, get_last_update
 import os
+
+from update_expenses import run_update
+
+from database import (
+    initialize_database,
+    get_dashboard_stats,
+    get_last_update
+)
 
 app = Flask(__name__)
 
@@ -11,11 +17,37 @@ app.secret_key = os.getenv(
 )
 
 
+# ==========================================
+# HOME PAGE
+# ==========================================
+
 @app.route("/")
 def dashboard():
 
-    stats = get_dashboard_stats()
-    last_update = get_last_update()
+    try:
+
+        # Create database & tables
+        initialize_database()
+
+        # Load dashboard data
+        stats = get_dashboard_stats()
+
+        last_update = get_last_update()
+
+    except Exception as error:
+
+        print("Dashboard Error:", error)
+
+        stats = {
+            "total_expenses": 0,
+            "gpay_total": 0,
+            "gmail_total": 0,
+            "total_transactions": 0,
+            "category_totals": [],
+            "monthly_totals": []
+        }
+
+        last_update = None
 
     return render_template(
         "dashboard.html",
@@ -23,6 +55,10 @@ def dashboard():
         last_update=last_update
     )
 
+
+# ==========================================
+# UPDATE BUTTON
+# ==========================================
 
 @app.route("/update", methods=["POST"])
 def update():
@@ -36,20 +72,22 @@ def update():
         success = run_update()
 
         if success:
+
             flash(
                 "Expense data updated successfully!",
                 "success"
             )
+
         else:
+
             flash(
-                "Expense update failed. Check terminal.",
+                "No new transactions found.",
                 "error"
             )
 
     except Exception as error:
 
-        print("\nUPDATE ERROR:")
-        print(error)
+        print("Update Error:", error)
 
         flash(
             f"Update failed: {error}",
@@ -58,6 +96,23 @@ def update():
 
     return redirect(url_for("dashboard"))
 
+
+# ==========================================
+# HEALTH CHECK
+# ==========================================
+
+@app.route("/health")
+def health():
+
+    return {
+        "status": "running",
+        "platform": "vercel" if os.getenv("VERCEL") else "local"
+    }
+
+
+# ==========================================
+# RUN LOCALLY
+# ==========================================
 
 if __name__ == "__main__":
 
@@ -69,7 +124,7 @@ if __name__ == "__main__":
     print("====================================")
 
     app.run(
-        host="127.0.0.1",
+        host="0.0.0.0",
         port=5000,
         debug=True
     )
