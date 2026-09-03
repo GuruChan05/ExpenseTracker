@@ -79,6 +79,12 @@ def get_transactions():
             clean_gpay_transactions(df)
         )
 
+        print("CSV FILE:", CSV_FILE)
+
+    df = read_gpay_transactions(CSV_FILE)
+
+    print("Rows in uploaded CSV:", len(df))
+
     if os.path.exists(GMAIL_FILE):
 
         gmail = read_gmail_transactions(
