@@ -10,24 +10,21 @@ from flask import (
 import os
 import tempfile
 
-from update_expenses import run_update
-
 from database import (
     initialize_database,
     get_dashboard_stats,
     get_last_update
 )
 
+from update_expenses import run_update
+
 app = Flask(__name__)
+app.secret_key = "expense-tracker-secret"
 
-app.secret_key = os.getenv(
-    "FLASK_SECRET_KEY",
-    "expense-tracker-secret"
-)
 
-# ==========================================
-# DASHBOARD
-# ==========================================
+# ===============================
+# HOME PAGE
+# ===============================
 
 @app.route("/")
 def dashboard():
@@ -44,68 +41,61 @@ def dashboard():
         last_update=last_update
     )
 
-# ==========================================
-# UPLOAD + UPDATE (ONE REQUEST)
-# ==========================================
+
+# ===============================
+# UPLOAD + UPDATE
+# ===============================
 
 @app.route("/update", methods=["POST"])
 def update():
 
-    file = request.files.get("csv_file")
+    file = request.files.get("expense_file")
 
-    if file is None or file.filename == "":
+    if not file:
 
-        flash(
-            "Please choose a Google Pay CSV.",
-            "error"
-        )
+        flash("Please choose a file.")
 
-        return redirect(url_for("dashboard"))
+        return redirect("/")
 
-    upload_dir = os.path.join(
+    upload_folder = os.path.join(
         tempfile.gettempdir(),
         "uploads"
     )
 
-    os.makedirs(upload_dir, exist_ok=True)
+    os.makedirs(upload_folder, exist_ok=True)
 
-    csv_path = os.path.join(
-        upload_dir,
-        "Transactions.csv"
+    file_path = os.path.join(
+        upload_folder,
+        file.filename
     )
 
-    file.save(csv_path)
+    file.save(file_path)
 
-    success = run_update(csv_path)
+    success = run_update(file_path)
 
     if success:
 
-        flash(
-            "New transactions imported successfully!",
-            "success"
-        )
+        flash("Expense updated successfully!")
 
     else:
 
-        flash(
-            "No new transactions found.",
-            "warning"
-        )
+        flash("No new transaction found.")
 
-    return redirect(url_for("dashboard"))
+    return redirect("/")
 
-# ==========================================
-# HEALTH
-# ==========================================
+
+# ===============================
+# HEALTH CHECK
+# ===============================
 
 @app.route("/health")
 def health():
+    return {"status": "running"}
 
-    return {
-        "status": "running"
-    }
 
-# ==========================================
+# ===============================
+# LOCAL RUN
+# ===============================
 
 if __name__ == "__main__":
 

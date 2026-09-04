@@ -1,10 +1,12 @@
-import hashlib
 import os
-from datetime import datetime
 
 from parser import (
     read_gpay_transactions,
     clean_gpay_transactions
+)
+
+from pdf_parser import (
+    extract_transactions_from_pdf
 )
 
 from categorizer import categorize_transaction
@@ -16,134 +18,96 @@ from database import (
     log_update
 )
 
-# ==========================================
-# UNIQUE TRANSACTION ID
-# ==========================================
+from datetime import datetime
+import hashlib
 
-def create_source_id(transaction):
-
-    transaction_id = str(
-        transaction.get("transaction_id", "")
-    ).strip()
-
-    if transaction_id:
-        return transaction_id
+def create_id(t):
 
     text = (
-        str(transaction.get("date")) +
-        "|" +
-        str(transaction.get("merchant")) +
-        "|" +
-        str(transaction.get("amount")) +
-        "|" +
-        str(transaction.get("source"))
+        str(t["date"]) +
+        str(t["merchant"]) +
+        str(t["amount"])
     )
 
-    return hashlib.sha256(
-        text.encode("utf-8")
-    ).hexdigest()
+    return hashlib.sha256(text.encode()).hexdigest()
 
-# ==========================================
-# READ CSV
-# ==========================================
+def read_file(path):
 
-def get_transactions(csv_file):
+    extension = os.path.splitext(path)[1].lower()
 
-    print("\nReading uploaded CSV...")
+    if extension == ".csv":
 
-    df = read_gpay_transactions(csv_file)
+        df = read_gpay_transactions(path)
 
-    transactions = clean_gpay_transactions(df)
+        return clean_gpay_transactions(df)
 
-    print(
-        "Transactions Found:",
-        len(transactions)
-    )
+    elif extension == ".pdf":
 
-    return transactions
+        return extract_transactions_from_pdf(path)
 
-# ==========================================
-# PROCESS
-# ==========================================
+    else:
 
-def process_transactions(transactions):
+        return []
 
-    new_count = 0
-
-    duplicate_count = 0
-
-    for transaction in transactions:
-
-        source = transaction["source"]
-
-        source_id = create_source_id(transaction)
-
-        if transaction_exists(
-            source,
-            source_id
-        ):
-
-            duplicate_count += 1
-
-            continue
-
-        merchant = transaction["merchant"]
-
-        amount = float(transaction["amount"])
-
-        category = categorize_transaction(
-            merchant,
-            amount
-        )
-
-        save_transaction(
-            source,
-            source_id,
-            transaction["date"],
-            merchant,
-            amount,
-            category,
-            str(transaction)
-        )
-
-        new_count += 1
-
-    print("New:", new_count)
-
-    print("Duplicates:", duplicate_count)
-
-    return new_count
-
-# ==========================================
-# MAIN UPDATE
-# ==========================================
-
-def run_update(csv_file):
+def run_update(file_path):
 
     initialize_database()
 
     started = datetime.now().isoformat()
 
-    transactions = get_transactions(csv_file)
+    transactions = read_file(file_path)
 
-    new_count = process_transactions(
-        transactions
-    )
+    new_count = 0
 
-    finished = datetime.now().isoformat()
+    for t in transactions:
+
+        source_id = create_id(t)
+
+        if transaction_exists(
+            t["source"],
+            source_id
+        ):
+            continue
+
+        category = categorize_transaction(
+            t["merchant"],
+            t["amount"]
+        )
+
+        save_transaction(
+
+            t["source"],
+
+            source_id,
+
+            t["date"],
+
+            t["merchant"],
+
+            t["amount"],
+
+            category,
+
+            ""
+
+        )
+
+        new_count += 1
 
     log_update(
+
         started,
-        finished,
+
+        datetime.now().isoformat(),
+
         "SUCCESS",
+
         new_count,
+
         ""
+
     )
 
+    print("Imported:", new_count)
+
     return True
-
-# ==========================================
-
-if __name__ == "__main__":
-
-    run_update("uploads/Transactions.csv")
