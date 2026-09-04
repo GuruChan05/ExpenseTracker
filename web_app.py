@@ -13,7 +13,9 @@ import tempfile
 from database import (
     initialize_database,
     get_dashboard_stats,
-    get_last_update
+    get_last_update,
+    get_recent_transactions,
+    get_top_merchants
 )
 
 from update_expenses import run_update
@@ -35,12 +37,17 @@ def dashboard():
 
     last_update = get_last_update()
 
+    recent = get_recent_transactions()
+
+    merchants = get_top_merchants()
+
     return render_template(
         "dashboard.html",
         stats=stats,
-        last_update=last_update
+        last_update=last_update,
+        recent=recent,
+        merchants=merchants
     )
-
 
 # ===============================
 # UPLOAD + UPDATE

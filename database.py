@@ -253,3 +253,53 @@ def log_update(
 
     conn.commit()
     conn.close()
+
+    # ==========================================
+# RECENT TRANSACTIONS
+# ==========================================
+
+def get_recent_transactions(limit=10):
+
+    conn = get_connection()
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT date,
+               merchant,
+               category,
+               amount
+        FROM transactions
+        ORDER BY date DESC
+        LIMIT ?
+    """,(limit,))
+
+    data = cur.fetchall()
+
+    conn.close()
+
+    return data
+
+
+# ==========================================
+# TOP MERCHANTS
+# ==========================================
+
+def get_top_merchants():
+
+    conn = get_connection()
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT merchant,
+               SUM(amount) total
+        FROM transactions
+        GROUP BY merchant
+        ORDER BY total DESC
+        LIMIT 5
+    """)
+
+    data = cur.fetchall()
+
+    conn.close()
+
+    return data
