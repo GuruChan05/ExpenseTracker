@@ -1,57 +1,32 @@
-from flask import (
-    Flask,
-    render_template,
-    request,
-    redirect,
-    url_for,
-    flash
-)
-
+from flask import Flask, render_template, request
 import os
 import tempfile
 
-from database import (
-    initialize_database,
-    get_dashboard_stats,
-    get_last_update,
-    get_recent_transactions,
-    get_top_merchants
-)
-
-from update_expenses import run_update
+from update_expenses import analyze_uploaded_file
 
 app = Flask(__name__)
-app.secret_key = "expense-tracker-secret"
 
+app.secret_key = "expense-tracker"
 
-# ===============================
-# HOME PAGE
-# ===============================
+# Empty dashboard
+EMPTY_STATS = {
+    "total_expense": 0,
+    "total_transactions": 0,
+    "category_totals": [],
+    "monthly_totals": []
+}
 
 @app.route("/")
-def dashboard():
-
-    initialize_database()
-
-    stats = get_dashboard_stats()
-
-    last_update = get_last_update()
-
-    recent = get_recent_transactions()
-
-    merchants = get_top_merchants()
+def home():
 
     return render_template(
         "dashboard.html",
-        stats=stats,
-        last_update=last_update,
-        recent=recent,
-        merchants=merchants
+        stats=EMPTY_STATS,
+        recent=[],
+        merchants=[],
+        last_update="-"
     )
 
-# ===============================
-# UPLOAD + UPDATE
-# ===============================
 
 @app.route("/update", methods=["POST"])
 def update():
@@ -59,57 +34,28 @@ def update():
     file = request.files.get("expense_file")
 
     if not file:
+        return "No file uploaded"
 
-        flash("Please choose a file.")
-
-        return redirect("/")
-
-    upload_folder = os.path.join(
-        tempfile.gettempdir(),
-        "uploads"
-    )
-
-    os.makedirs(upload_folder, exist_ok=True)
+    temp_dir = tempfile.gettempdir()
 
     file_path = os.path.join(
-        upload_folder,
+        temp_dir,
         file.filename
     )
 
     file.save(file_path)
 
-    success = run_update(file_path)
+    result = analyze_uploaded_file(file_path)
 
-    if success:
+    return render_template(
+        "dashboard.html",
+        stats=result["stats"],
+        recent=result["recent"],
+        merchants=result["merchants"],
+        last_update=result["last_update"]
+    )
 
-        flash("Expense updated successfully!")
-
-    else:
-
-        flash("No new transaction found.")
-
-    return redirect("/")
-
-
-# ===============================
-# HEALTH CHECK
-# ===============================
-
-@app.route("/health")
-def health():
-    return {"status": "running"}
-
-
-# ===============================
-# LOCAL RUN
-# ===============================
 
 if __name__ == "__main__":
 
-    initialize_database()
-
-    app.run(
-        host="0.0.0.0",
-        port=5000,
-        debug=True
-    )
+    app.run(debug=True)

@@ -1,4 +1,6 @@
 import os
+from collections import defaultdict
+from datetime import datetime
 
 from parser import (
     read_gpay_transactions,
@@ -11,103 +13,128 @@ from pdf_parser import (
 
 from categorizer import categorize_transaction
 
-from database import (
-    initialize_database,
-    transaction_exists,
-    save_transaction,
-    log_update
-)
 
-from datetime import datetime
-import hashlib
+def analyze_uploaded_file(file_path):
 
-def create_id(t):
+    ext = os.path.splitext(file_path)[1].lower()
 
-    text = (
-        str(t["date"]) +
-        str(t["merchant"]) +
-        str(t["amount"])
-    )
+    # ----------------------------
+    # CSV
+    # ----------------------------
 
-    return hashlib.sha256(text.encode()).hexdigest()
+    if ext == ".csv":
 
-def read_file(path):
+        df = read_gpay_transactions(file_path)
 
-    extension = os.path.splitext(path)[1].lower()
+        transactions = clean_gpay_transactions(df)
 
-    if extension == ".csv":
+    # ----------------------------
+    # PDF
+    # ----------------------------
 
-        df = read_gpay_transactions(path)
+    elif ext == ".pdf":
 
-        return clean_gpay_transactions(df)
-
-    elif extension == ".pdf":
-
-        return extract_transactions_from_pdf(path)
+        transactions = extract_transactions_from_pdf(
+            file_path
+        )
 
     else:
 
-        return []
+        transactions = []
 
-def run_update(file_path):
-
-    initialize_database()
-
-    started = datetime.now().isoformat()
-
-    transactions = read_file(file_path)
-
-    new_count = 0
+    # ----------------------------
+    # Categorize
+    # ----------------------------
 
     for t in transactions:
 
-        source_id = create_id(t)
-
-        if transaction_exists(
-            t["source"],
-            source_id
-        ):
-            continue
-
-        category = categorize_transaction(
+        t["category"] = categorize_transaction(
             t["merchant"],
             t["amount"]
         )
 
-        save_transaction(
+    # ----------------------------
+    # Total
+    # ----------------------------
 
-            t["source"],
-
-            source_id,
-
-            t["date"],
-
-            t["merchant"],
-
-            t["amount"],
-
-            category,
-
-            ""
-
-        )
-
-        new_count += 1
-
-    log_update(
-
-        started,
-
-        datetime.now().isoformat(),
-
-        "SUCCESS",
-
-        new_count,
-
-        ""
-
+    total = sum(
+        t["amount"] for t in transactions
     )
 
-    print("Imported:", new_count)
+    # ----------------------------
+    # Category
+    # ----------------------------
 
-    return True
+    category = defaultdict(float)
+
+    for t in transactions:
+
+        category[
+            t["category"]
+        ] += t["amount"]
+
+    category_totals = list(category.items())
+
+    # ----------------------------
+    # Monthly
+    # ----------------------------
+
+    monthly = defaultdict(float)
+
+    for t in transactions:
+
+        month = t["date"][:7]
+
+        monthly[month] += t["amount"]
+
+    monthly_totals = list(monthly.items())
+
+    # ----------------------------
+    # Merchant
+    # ----------------------------
+
+    merchant = defaultdict(float)
+
+    for t in transactions:
+
+        merchant[
+            t["merchant"]
+        ] += t["amount"]
+
+    merchants = sorted(
+        merchant.items(),
+        key=lambda x: x[1],
+        reverse=True
+    )[:5]
+
+    recent = sorted(
+        transactions,
+        key=lambda x: x["date"],
+        reverse=True
+    )[:10]
+
+    stats = {
+
+        "total_expense": total,
+
+        "total_transactions": len(transactions),
+
+        "category_totals": category_totals,
+
+        "monthly_totals": monthly_totals
+
+    }
+
+    return {
+
+        "stats": stats,
+
+        "recent": recent,
+
+        "merchants": merchants,
+
+        "last_update": datetime.now().strftime(
+            "%d-%m-%Y %H:%M"
+        )
+
+    }
