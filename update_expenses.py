@@ -1,3 +1,4 @@
+import hashlib
 import os
 from collections import defaultdict
 from datetime import datetime
@@ -7,134 +8,263 @@ from parser import (
     clean_gpay_transactions
 )
 
-from pdf_parser import (
-    extract_transactions_from_pdf
-)
+from pdf_parser import extract_transactions_from_pdf
 
 from categorizer import categorize_transaction
 
+from database import (
+    initialize_database,
+    transaction_exists,
+    save_transaction,
+    log_update,
+    get_dashboard_stats,
+    get_recent_transactions,
+    get_top_merchants
+)
 
-def analyze_uploaded_file(file_path):
 
+# ============================================================
+# CREATE A STABLE ID
+# ============================================================
+
+def create_source_id(transaction):
+    """
+    Prefer the GPay transaction ID.
+
+    If the file does not contain one, create a stable hash from
+    date + merchant + amount + source.
+
+    This lets later monthly uploads skip transactions already
+    stored in the database.
+    """
+    transaction_id = str(
+        transaction.get("transaction_id", "")
+    ).strip()
+
+    if transaction_id and transaction_id.lower() not in {
+        "nan", "none", "null"
+    }:
+        return transaction_id
+
+    text = "|".join([
+        str(transaction.get("date", "")).strip(),
+        str(transaction.get("merchant", "")).strip(),
+        str(transaction.get("amount", "")).strip(),
+        str(transaction.get("source", "")).strip()
+    ])
+
+    return hashlib.sha256(
+        text.encode("utf-8")
+    ).hexdigest()
+
+
+# ============================================================
+# READ ONE UPLOADED FILE
+# ============================================================
+
+def read_uploaded_file(file_path):
     ext = os.path.splitext(file_path)[1].lower()
 
-    # ----------------------------
-    # CSV
-    # ----------------------------
-
     if ext == ".csv":
-
         df = read_gpay_transactions(file_path)
+        return clean_gpay_transactions(df)
 
-        transactions = clean_gpay_transactions(df)
+    if ext == ".pdf":
+        return extract_transactions_from_pdf(file_path)
 
-    # ----------------------------
-    # PDF
-    # ----------------------------
-
-    elif ext == ".pdf":
-
-        transactions = extract_transactions_from_pdf(
-            file_path
-        )
-
-    else:
-
-        transactions = []
-
-    # ----------------------------
-    # Categorize
-    # ----------------------------
-
-    for t in transactions:
-
-        t["category"] = categorize_transaction(
-            t["merchant"],
-            t["amount"]
-        )
-
-    # ----------------------------
-    # Total
-    # ----------------------------
-
-    total = sum(
-        t["amount"] for t in transactions
+    raise ValueError(
+        "Unsupported file type. Please upload a CSV or PDF."
     )
 
-    # ----------------------------
-    # Category
-    # ----------------------------
 
-    category = defaultdict(float)
+# ============================================================
+# ADD ONLY NEW TRANSACTIONS
+# ============================================================
 
-    for t in transactions:
+def save_new_transactions(transactions):
+    new_count = 0
+    duplicate_count = 0
 
-        category[
-            t["category"]
-        ] += t["amount"]
+    for transaction in transactions:
+        source = str(
+            transaction.get("source", "Google Pay")
+        ).strip() or "Google Pay"
 
-    category_totals = list(category.items())
+        source_id = create_source_id(transaction)
 
-    # ----------------------------
-    # Monthly
-    # ----------------------------
+        date = str(
+            transaction.get("date", "")
+        ).strip()
 
-    monthly = defaultdict(float)
+        merchant = str(
+            transaction.get("merchant", "Unknown")
+        ).strip() or "Unknown"
 
-    for t in transactions:
+        try:
+            amount = float(transaction.get("amount", 0))
+        except (TypeError, ValueError):
+            amount = 0.0
 
-        month = t["date"][:7]
+        if amount <= 0:
+            continue
 
-        monthly[month] += t["amount"]
+        category = transaction.get("category")
 
-    monthly_totals = list(monthly.items())
+        if not category:
+            category = categorize_transaction(
+                merchant,
+                amount
+            )
 
-    # ----------------------------
-    # Merchant
-    # ----------------------------
-
-    merchant = defaultdict(float)
-
-    for t in transactions:
-
-        merchant[
-            t["merchant"]
-        ] += t["amount"]
-
-    merchants = sorted(
-        merchant.items(),
-        key=lambda x: x[1],
-        reverse=True
-    )[:5]
-
-    recent = sorted(
-        transactions,
-        key=lambda x: x["date"],
-        reverse=True
-    )[:10]
-
-    stats = {
-
-        "total_expense": total,
-
-        "total_transactions": len(transactions),
-
-        "category_totals": category_totals,
-
-        "monthly_totals": monthly_totals
-
-    }
-
-    return {
-
-        "stats": stats,
-
-        "recent": recent,
-
-        "merchants": merchants,
-
-        "last_update": datetime.now().strftime(
-            "%d-%m-%Y %H:%M"
+        description = str(
+            transaction.get("description", "")
         )
 
+        # IMPORTANT:
+        # Existing months are NEVER deleted.
+        if transaction_exists(source, source_id):
+            duplicate_count += 1
+            continue
+
+        saved = save_transaction(
+            source=source,
+            source_id=source_id,
+            date=date,
+            merchant=merchant,
+            amount=amount,
+            category=category,
+            description=description
+        )
+
+        if saved:
+            new_count += 1
+        else:
+            duplicate_count += 1
+
+    return new_count, duplicate_count
+
+
+# ============================================================
+# MAIN UPLOAD PROCESS
+# ============================================================
+
+def analyze_uploaded_file(file_path):
+    started_at = datetime.now().isoformat()
+
+    try:
+        initialize_database()
+
+        print("\n" + "=" * 60)
+        print("EXPENSE TRACKER - NEW FILE")
+        print("=" * 60)
+        print("File:", file_path)
+
+        # Read ONLY the file uploaded in this request.
+        transactions = read_uploaded_file(file_path)
+
+        print("Transactions found in uploaded file:", len(transactions))
+
+        # Categorize before saving.
+        for transaction in transactions:
+            transaction["category"] = categorize_transaction(
+                transaction.get("merchant", "Unknown"),
+                transaction.get("amount", 0)
+            )
+
+        new_count, duplicate_count = save_new_transactions(
+            transactions
+        )
+
+        finished_at = datetime.now().isoformat()
+
+        log_update(
+            started_at=started_at,
+            finished_at=finished_at,
+            status="SUCCESS",
+            new_transactions=new_count,
+            error=""
+        )
+
+        print("NEW TRANSACTIONS:", new_count)
+        print("DUPLICATES SKIPPED:", duplicate_count)
+        print("Existing database data was kept.")
+
+        result = build_dashboard_result()
+
+        result["upload_message"] = (
+            f"Added {new_count} new transaction(s). "
+            f"Skipped {duplicate_count} duplicate(s). "
+            f"Existing expenses were kept."
+        )
+
+        return result
+
+    except Exception as error:
+        finished_at = datetime.now().isoformat()
+
+        try:
+            log_update(
+                started_at=started_at,
+                finished_at=finished_at,
+                status="FAILED",
+                new_transactions=0,
+                error=str(error)
+            )
+        except Exception:
+            pass
+
+        print("UPLOAD ERROR:", error)
+        raise
+
+
+# ============================================================
+# LOAD THE COMPLETE DASHBOARD
+# ============================================================
+
+def build_dashboard_result():
+    initialize_database()
+
+    stats = get_dashboard_stats()
+    recent_rows = get_recent_transactions(20)
+    merchants = get_top_merchants()
+    last_update = get_last_update()
+
+    recent = [
+        {
+            "date": row[0],
+            "merchant": row[1],
+            "category": row[2],
+            "amount": row[3]
+        }
+        for row in recent_rows
+    ]
+
+    return {
+        "stats": stats,
+        "recent": recent,
+        "merchants": merchants,
+        "last_update": last_update or "-"
     }
+
+
+# ============================================================
+# COMPATIBILITY FUNCTION
+# ============================================================
+
+def run_update():
+    """
+    Kept for compatibility with older code.
+
+    This project now expects an uploaded file, so there is no
+    hard-coded old Transactions.csv file to process here.
+    """
+    raise RuntimeError(
+        "run_update() no longer reads an old fixed file. "
+        "Upload a new CSV/PDF through the website."
+    )
+
+
+if __name__ == "__main__":
+    print(
+        "Use the Flask upload page to import a new expense file."
+    )

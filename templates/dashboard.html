@@ -1,70 +1,134 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <title>Expense Tracker</title>
 
 <style>
-
-body{
-font-family:Arial;
-background:#f4f6f9;
-margin:30px;
+* {
+    box-sizing: border-box;
 }
 
-.container{
-max-width:1100px;
-margin:auto;
+body {
+    font-family: Arial, sans-serif;
+    background: #f4f6f9;
+    margin: 0;
+    padding: 30px;
+    color: #1f2937;
 }
 
-.cards{
-display:grid;
-grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
-gap:15px;
-margin:20px 0;
+.container {
+    max-width: 1100px;
+    margin: auto;
 }
 
-.card{
-background:white;
-padding:20px;
-border-radius:10px;
-box-shadow:0 2px 6px #ddd;
+h1 {
+    margin-bottom: 8px;
 }
 
-.value{
-font-size:28px;
-color:#2563eb;
-font-weight:bold;
+.subtitle {
+    color: #6b7280;
+    margin-top: 0;
 }
 
-table{
-width:100%;
-background:white;
-border-collapse:collapse;
-margin-top:10px;
+.upload-box {
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px #ddd;
+    margin: 20px 0;
 }
 
-th{
-background:#2563eb;
-color:white;
-padding:10px;
+input[type="file"] {
+    margin-right: 10px;
 }
 
-td{
-padding:10px;
-border-bottom:1px solid #eee;
+button {
+    padding: 11px 20px;
+    background: #2563eb;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
 }
 
-button{
-padding:12px 20px;
-background:#2563eb;
-color:white;
-border:none;
-border-radius:6px;
+button:hover {
+    background: #1d4ed8;
 }
 
+.message {
+    padding: 12px 15px;
+    border-radius: 8px;
+    margin: 12px 0;
+    background: #dcfce7;
+}
+
+.error {
+    background: #fee2e2;
+}
+
+.cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 15px;
+    margin: 20px 0;
+}
+
+.card {
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 2px 6px #ddd;
+}
+
+.value {
+    font-size: 28px;
+    color: #2563eb;
+    font-weight: bold;
+    margin-top: 8px;
+}
+
+.section {
+    margin-top: 28px;
+}
+
+.table-wrap {
+    overflow-x: auto;
+}
+
+table {
+    width: 100%;
+    background: white;
+    border-collapse: collapse;
+    margin-top: 10px;
+    box-shadow: 0 2px 6px #ddd;
+}
+
+th {
+    background: #2563eb;
+    color: white;
+    padding: 11px;
+    text-align: left;
+}
+
+td {
+    padding: 11px;
+    border-bottom: 1px solid #eee;
+}
+
+.empty {
+    color: #6b7280;
+    padding: 20px;
+    background: white;
+}
+
+.last-update {
+    margin-top: 25px;
+    color: #6b7280;
+}
 </style>
-
 </head>
 
 <body>
@@ -72,169 +136,174 @@ border-radius:6px;
 <div class="container">
 
 <h1>💰 Expense Tracker</h1>
+<p class="subtitle">
+    Upload each month's GPay statement. Existing expenses stay saved.
+    New transactions are added and duplicates are skipped.
+</p>
 
-<form
-action="/update"
-method="POST"
-enctype="multipart/form-data">
+<div class="upload-box">
+    <form
+        action="/update"
+        method="POST"
+        enctype="multipart/form-data">
 
-<input
-type="file"
-name="expense_file"
-accept=".csv,.pdf"
-required>
+        <input
+            type="file"
+            name="expense_file"
+            accept=".csv,.pdf"
+            required>
 
-<button>
+        <button type="submit">
+            Upload & Add Expenses
+        </button>
+    </form>
+</div>
 
-Analyze File
-
-</button>
-
-</form>
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+        <div class="message {% if category == 'error' %}error{% endif %}">
+            {{ message }}
+        </div>
+    {% endfor %}
+{% endwith %}
 
 <div class="cards">
 
-<div class="card">
+    <div class="card">
+        <h3>Total Expense</h3>
+        <div class="value">
+            ₹{{ "%.2f"|format(stats.total_expense) }}
+        </div>
+    </div>
 
-<h3>Total Expense</h3>
+    <div class="card">
+        <h3>Total Transactions</h3>
+        <div class="value">
+            {{ stats.total_transactions }}
+        </div>
+    </div>
 
-<div class="value">
-
-₹{{"%.2f"|format(stats.total_expense)}}
-
-</div>
-
-</div>
-
-<div class="card">
-
-<h3>Total Transactions</h3>
-
-<div class="value">
-
-{{stats.total_transactions}}
-
-</div>
-
-</div>
+    <div class="card">
+        <h3>Google Pay Total</h3>
+        <div class="value">
+            ₹{{ "%.2f"|format(stats.gpay_total) }}
+        </div>
+    </div>
 
 </div>
 
+
+<div class="section">
 <h2>📊 Category Split</h2>
 
+{% if stats.category_totals %}
+<div class="table-wrap">
 <table>
-
 <tr>
-
-<th>Category</th>
-
-<th>Amount</th>
-
+    <th>Category</th>
+    <th>Amount</th>
 </tr>
 
 {% for c in stats.category_totals %}
-
 <tr>
-
-<td>{{c[0]}}</td>
-
-<td>₹{{"%.2f"|format(c[1])}}</td>
-
+    <td>{{ c[0] }}</td>
+    <td>₹{{ "%.2f"|format(c[1]) }}</td>
 </tr>
-
 {% endfor %}
 
 </table>
+</div>
+{% else %}
+<div class="empty">No expenses uploaded yet.</div>
+{% endif %}
+</div>
 
+
+<div class="section">
 <h2>🛒 Recent Transactions</h2>
 
+{% if recent %}
+<div class="table-wrap">
 <table>
-
 <tr>
-
-<th>Date</th>
-
-<th>Merchant</th>
-
-<th>Category</th>
-
-<th>Amount</th>
-
+    <th>Date</th>
+    <th>Merchant</th>
+    <th>Category</th>
+    <th>Amount</th>
 </tr>
 
 {% for t in recent %}
-
 <tr>
-
-<td>{{t.date}}</td>
-
-<td>{{t.merchant}}</td>
-
-<td>{{t.category}}</td>
-
-<td>₹{{"%.2f"|format(t.amount)}}</td>
-
+    <td>{{ t.date }}</td>
+    <td>{{ t.merchant }}</td>
+    <td>{{ t.category }}</td>
+    <td>₹{{ "%.2f"|format(t.amount) }}</td>
 </tr>
-
 {% endfor %}
 
 </table>
+</div>
+{% else %}
+<div class="empty">No transactions uploaded yet.</div>
+{% endif %}
+</div>
 
+
+<div class="section">
 <h2>🏪 Top Merchants</h2>
 
+{% if merchants %}
+<div class="table-wrap">
 <table>
-
 <tr>
-
-<th>Merchant</th>
-
-<th>Total</th>
-
+    <th>Merchant</th>
+    <th>Total</th>
 </tr>
 
 {% for m in merchants %}
-
 <tr>
-
-<td>{{m[0]}}</td>
-
-<td>₹{{"%.2f"|format(m[1])}}</td>
-
+    <td>{{ m[0] }}</td>
+    <td>₹{{ "%.2f"|format(m[1]) }}</td>
 </tr>
-
 {% endfor %}
 
 </table>
+</div>
+{% else %}
+<div class="empty">No merchant data yet.</div>
+{% endif %}
+</div>
 
+
+<div class="section">
 <h2>📅 Monthly Spending</h2>
 
+{% if stats.monthly_totals %}
+<div class="table-wrap">
 <table>
-
 <tr>
-
-<th>Month</th>
-
-<th>Amount</th>
-
+    <th>Month</th>
+    <th>Amount</th>
 </tr>
 
 {% for m in stats.monthly_totals %}
-
 <tr>
-
-<td>{{m[0]}}</td>
-
-<td>₹{{"%.2f"|format(m[1])}}</td>
-
+    <td>{{ m[0] }}</td>
+    <td>₹{{ "%.2f"|format(m[1]) }}</td>
 </tr>
-
 {% endfor %}
 
 </table>
+</div>
+{% else %}
+<div class="empty">No monthly data yet.</div>
+{% endif %}
+</div>
 
-<br>
 
-<b>Last Update:</b> {{last_update}}
+<div class="last-update">
+    <b>Last successful update:</b> {{ last_update }}
+</div>
 
 </div>
 

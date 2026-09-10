@@ -2,9 +2,12 @@ import sqlite3
 import os
 from datetime import datetime
 
-# ==========================================
+# ============================================================
 # DATABASE LOCATION
-# ==========================================
+# ============================================================
+# Local: permanent SQLite database beside this file.
+# Vercel: /tmp is writable but NOT permanent between deployments/
+# serverless instances. For permanent cloud storage, use an external DB.
 
 if os.getenv("VERCEL"):
     DATABASE = "/tmp/expense_tracker.db"
@@ -17,73 +20,72 @@ def get_connection():
     return sqlite3.connect(DATABASE)
 
 
-# ==========================================
+# ============================================================
 # CREATE TABLES
-# ==========================================
+# ============================================================
 
 def initialize_database():
-
     conn = get_connection()
     cur = conn.cursor()
 
     cur.execute("""
-    CREATE TABLE IF NOT EXISTS transactions(
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        source TEXT,
-        source_id TEXT,
-        date TEXT,
-        merchant TEXT,
-        amount REAL,
-        category TEXT,
-        description TEXT,
-        created_at TEXT
-    )
+        CREATE TABLE IF NOT EXISTS transactions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            source TEXT NOT NULL,
+            source_id TEXT NOT NULL,
+            date TEXT,
+            merchant TEXT,
+            amount REAL,
+            category TEXT,
+            description TEXT,
+            created_at TEXT
+        )
     """)
 
     cur.execute("""
-    CREATE UNIQUE INDEX IF NOT EXISTS unique_transaction
-    ON transactions(source, source_id)
+        CREATE UNIQUE INDEX IF NOT EXISTS unique_transaction
+        ON transactions(source, source_id)
     """)
 
     cur.execute("""
-    CREATE TABLE IF NOT EXISTS update_logs(
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        started_at TEXT,
-        finished_at TEXT,
-        status TEXT,
-        new_transactions INTEGER,
-        error TEXT
-    )
+        CREATE TABLE IF NOT EXISTS update_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            started_at TEXT,
+            finished_at TEXT,
+            status TEXT,
+            new_transactions INTEGER,
+            error TEXT
+        )
     """)
 
     conn.commit()
     conn.close()
 
 
-# ==========================================
+# ============================================================
 # DUPLICATE CHECK
-# ==========================================
+# ============================================================
 
 def transaction_exists(source, source_id):
-
     conn = get_connection()
     cur = conn.cursor()
 
     cur.execute("""
-    SELECT id FROM transactions
-    WHERE source=? AND source_id=?
+        SELECT id
+        FROM transactions
+        WHERE source = ? AND source_id = ?
+        LIMIT 1
     """, (source, source_id))
 
     result = cur.fetchone()
-
     conn.close()
 
     return result is not None
 
 
-# ==========================================
+# ============================================================
 # SAVE TRANSACTION
-# ==========================================
+# ============================================================
 
 def save_transaction(
     source,
@@ -94,26 +96,23 @@ def save_transaction(
     category,
     description=""
 ):
-
     conn = get_connection()
     cur = conn.cursor()
 
     try:
-
         cur.execute("""
-        INSERT INTO transactions(
-            source,
-            source_id,
-            date,
-            merchant,
-            amount,
-            category,
-            description,
-            created_at
-        )
-        VALUES(?,?,?,?,?,?,?,?)
-        """,
-        (
+            INSERT INTO transactions (
+                source,
+                source_id,
+                date,
+                merchant,
+                amount,
+                category,
+                description,
+                created_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
             source,
             source_id,
             date,
@@ -134,55 +133,61 @@ def save_transaction(
         conn.close()
 
 
-# ==========================================
+# ============================================================
 # DASHBOARD
-# ==========================================
+# ============================================================
 
 def get_dashboard_stats():
-
     conn = get_connection()
     cur = conn.cursor()
 
-    cur.execute("SELECT COALESCE(SUM(amount),0) FROM transactions")
+    cur.execute("""
+        SELECT COALESCE(SUM(amount), 0)
+        FROM transactions
+    """)
     total = cur.fetchone()[0]
 
-    cur.execute("SELECT COUNT(*) FROM transactions")
+    cur.execute("""
+        SELECT COUNT(*)
+        FROM transactions
+    """)
     count = cur.fetchone()[0]
 
     cur.execute("""
-    SELECT COALESCE(SUM(amount),0)
-    FROM transactions
-    WHERE source='Google Pay'
+        SELECT COALESCE(SUM(amount), 0)
+        FROM transactions
+        WHERE source = 'Google Pay'
     """)
     gpay = cur.fetchone()[0]
 
     cur.execute("""
-    SELECT COALESCE(SUM(amount),0)
-    FROM transactions
-    WHERE source='Gmail'
+        SELECT COALESCE(SUM(amount), 0)
+        FROM transactions
+        WHERE source = 'Gmail'
     """)
     gmail = cur.fetchone()[0]
 
     cur.execute("""
-    SELECT category,SUM(amount)
-    FROM transactions
-    GROUP BY category
-    ORDER BY SUM(amount) DESC
+        SELECT category, SUM(amount)
+        FROM transactions
+        GROUP BY category
+        ORDER BY SUM(amount) DESC
     """)
     category = cur.fetchall()
 
     cur.execute("""
-    SELECT substr(date,1,7),SUM(amount)
-    FROM transactions
-    GROUP BY substr(date,1,7)
-    ORDER BY substr(date,1,7)
+        SELECT substr(date, 1, 7), SUM(amount)
+        FROM transactions
+        WHERE date IS NOT NULL AND date != ''
+        GROUP BY substr(date, 1, 7)
+        ORDER BY substr(date, 1, 7)
     """)
     monthly = cur.fetchall()
 
     conn.close()
 
     return {
-        "total_expenses": total,
+        "total_expense": total,
         "total_transactions": count,
         "gpay_total": gpay,
         "gmail_total": gmail,
@@ -191,36 +196,31 @@ def get_dashboard_stats():
     }
 
 
-# ==========================================
+# ============================================================
 # LAST UPDATE
-# ==========================================
+# ============================================================
 
 def get_last_update():
-
     conn = get_connection()
     cur = conn.cursor()
 
     cur.execute("""
-    SELECT finished_at
-    FROM update_logs
-    WHERE status='SUCCESS'
-    ORDER BY id DESC
-    LIMIT 1
+        SELECT finished_at
+        FROM update_logs
+        WHERE status = 'SUCCESS'
+        ORDER BY id DESC
+        LIMIT 1
     """)
 
     row = cur.fetchone()
-
     conn.close()
 
-    if row:
-        return row[0]
-
-    return None
+    return row[0] if row else None
 
 
-# ==========================================
+# ============================================================
 # LOG UPDATE
-# ==========================================
+# ============================================================
 
 def log_update(
     started_at,
@@ -229,21 +229,19 @@ def log_update(
     new_transactions=0,
     error=""
 ):
-
     conn = get_connection()
     cur = conn.cursor()
 
     cur.execute("""
-    INSERT INTO update_logs(
-        started_at,
-        finished_at,
-        status,
-        new_transactions,
-        error
-    )
-    VALUES(?,?,?,?,?)
-    """,
-    (
+        INSERT INTO update_logs (
+            started_at,
+            finished_at,
+            status,
+            new_transactions,
+            error
+        )
+        VALUES (?, ?, ?, ?, ?)
+    """, (
         started_at,
         finished_at,
         status,
@@ -254,44 +252,38 @@ def log_update(
     conn.commit()
     conn.close()
 
-    # ==========================================
+
+# ============================================================
 # RECENT TRANSACTIONS
-# ==========================================
+# ============================================================
 
-def get_recent_transactions(limit=10):
-
+def get_recent_transactions(limit=20):
     conn = get_connection()
     cur = conn.cursor()
 
     cur.execute("""
-        SELECT date,
-               merchant,
-               category,
-               amount
+        SELECT date, merchant, category, amount
         FROM transactions
-        ORDER BY date DESC
+        ORDER BY date DESC, id DESC
         LIMIT ?
-    """,(limit,))
+    """, (limit,))
 
     data = cur.fetchall()
-
     conn.close()
 
     return data
 
 
-# ==========================================
+# ============================================================
 # TOP MERCHANTS
-# ==========================================
+# ============================================================
 
 def get_top_merchants():
-
     conn = get_connection()
     cur = conn.cursor()
 
     cur.execute("""
-        SELECT merchant,
-               SUM(amount) total
+        SELECT merchant, SUM(amount) AS total
         FROM transactions
         GROUP BY merchant
         ORDER BY total DESC
@@ -299,7 +291,6 @@ def get_top_merchants():
     """)
 
     data = cur.fetchall()
-
     conn.close()
 
     return data
