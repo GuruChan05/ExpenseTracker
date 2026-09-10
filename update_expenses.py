@@ -17,9 +17,7 @@ from database import (
     transaction_exists,
     save_transaction,
     log_update,
-    get_dashboard_stats,
-    get_recent_transactions,
-    get_top_merchants
+    get_last_update
 )
 
 
