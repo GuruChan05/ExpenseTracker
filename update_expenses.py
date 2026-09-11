@@ -8,17 +8,17 @@ from parser import (
     clean_gpay_transactions
 )
 
-from pdf_parser import extract_transactions_from_pdf
+from pdf_parser import (
+    extract_transactions_from_pdf
+)
 
 from categorizer import categorize_transaction
 
 from database import (
-    initialize_database,
-    transaction_exists,
-    save_transaction,
-    log_update,
+    get_dashboard_stats,
     get_last_update,
-    get_dashboard_stats
+    get_recent_transactions,
+    get_top_merchants
 )
 
 
