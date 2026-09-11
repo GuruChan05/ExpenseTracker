@@ -34,13 +34,13 @@ def home():
     result = build_dashboard_result()
 
     return render_template(
-        "dashboard.html",
-        stats=result["stats"],
-        recent=result["recent"],
-        merchants=result["merchants"],
-        last_update=result["last_update"],
-        upload_message=None
-    )
+    "dashboard.html",
+    stats=result["stats"],
+    recent=result["recent"],
+    merchants=result["merchants"],
+    last_update=result["last_update"],
+    upload_message=None
+)
 
 
 @app.route("/update", methods=["POST"])

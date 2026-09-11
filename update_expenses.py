@@ -15,10 +15,6 @@ from categorizer import (
     categorize_transaction
 )
 
-# ============================================================
-# DATABASE IMPORTS
-# ============================================================
-
 from database import (
     initialize_database,
     transaction_exists,
@@ -27,56 +23,60 @@ from database import (
     get_dashboard_stats,
     get_last_update,
     get_recent_transactions,
+    get_all_transactions,
     get_top_merchants
 )
 
 
-# ============================================================
-# CREATE STABLE TRANSACTION ID
-# ============================================================
+def clean_value(value):
+    """Convert a value safely to a clean string."""
+
+    if value is None:
+        return ""
+
+    text = str(value).strip()
+
+    if text.lower() in {
+        "nan",
+        "none",
+        "null"
+    }:
+        return ""
+
+    return text
+
 
 def create_source_id(transaction):
     """
-    Create a stable ID for each transaction.
+    Create a stable unique ID.
 
-    First preference:
-        Google Pay Transaction ID
-
-    If Transaction ID is unavailable:
-        SHA256(date + merchant + amount + source)
-
-    This prevents the same transaction from being
-    inserted again when the same monthly file is uploaded.
+    Google Pay transaction ID is preferred.
+    If unavailable, create a SHA256 ID from
+    date + merchant + amount + source.
     """
 
-    transaction_id = str(
+    transaction_id = clean_value(
         transaction.get("transaction_id", "")
-    ).strip()
+    )
 
     if transaction_id:
-        if transaction_id.lower() not in {
-            "nan",
-            "none",
-            "null",
-            ""
-        }:
-            return transaction_id
+        return transaction_id
 
-    date = str(
+    date = clean_value(
         transaction.get("date", "")
-    ).strip()
+    )
 
-    merchant = str(
+    merchant = clean_value(
         transaction.get("merchant", "")
-    ).strip()
+    )
 
-    amount = str(
+    amount = clean_value(
         transaction.get("amount", "")
-    ).strip()
+    )
 
-    source = str(
+    source = clean_value(
         transaction.get("source", "Google Pay")
-    ).strip()
+    ) or "Google Pay"
 
     text = "|".join([
         date,
@@ -90,9 +90,27 @@ def create_source_id(transaction):
     ).hexdigest()
 
 
-# ============================================================
-# READ UPLOADED FILE
-# ============================================================
+def extract_paid_to(transaction):
+    """
+    Get the person/business the payment was made to.
+
+    Uses paid_to when available.
+    Otherwise falls back to merchant.
+    """
+
+    paid_to = clean_value(
+        transaction.get("paid_to", "")
+    )
+
+    if paid_to:
+        return paid_to
+
+    merchant = clean_value(
+        transaction.get("merchant", "")
+    )
+
+    return merchant or "Unknown"
+
 
 def read_uploaded_file(file_path):
 
@@ -105,47 +123,27 @@ def read_uploaded_file(file_path):
         file_path
     )[1].lower()
 
-    # --------------------------------------------------------
-    # CSV
-    # --------------------------------------------------------
-
     if ext == ".csv":
 
         df = read_gpay_transactions(
             file_path
         )
 
-        transactions = clean_gpay_transactions(
+        return clean_gpay_transactions(
             df
         )
 
-        return transactions
-
-    # --------------------------------------------------------
-    # PDF
-    # --------------------------------------------------------
-
     if ext == ".pdf":
 
-        transactions = extract_transactions_from_pdf(
+        return extract_transactions_from_pdf(
             file_path
         )
-
-        return transactions
-
-    # --------------------------------------------------------
-    # Unsupported
-    # --------------------------------------------------------
 
     raise ValueError(
         "Unsupported file type. "
         "Please upload a CSV or PDF file."
     )
 
-
-# ============================================================
-# SAVE ONLY NEW TRANSACTIONS
-# ============================================================
 
 def save_new_transactions(transactions):
 
@@ -157,56 +155,49 @@ def save_new_transactions(transactions):
 
     for transaction in transactions:
 
-        # ----------------------------------------------------
-        # SOURCE
-        # ----------------------------------------------------
+        # -------------------------------
+        # BASIC INFORMATION
+        # -------------------------------
 
-        source = str(
+        source = clean_value(
             transaction.get(
                 "source",
                 "Google Pay"
             )
-        ).strip()
-
-        if not source:
-            source = "Google Pay"
-
-        # ----------------------------------------------------
-        # TRANSACTION ID
-        # ----------------------------------------------------
+        ) or "Google Pay"
 
         source_id = create_source_id(
             transaction
         )
 
-        # ----------------------------------------------------
-        # DATE
-        # ----------------------------------------------------
+        transaction_id = clean_value(
+            transaction.get(
+                "transaction_id",
+                ""
+            )
+        )
 
-        date = str(
+        date = clean_value(
             transaction.get(
                 "date",
                 ""
             )
-        ).strip()
+        )
 
-        # ----------------------------------------------------
-        # MERCHANT
-        # ----------------------------------------------------
-
-        merchant = str(
+        merchant = clean_value(
             transaction.get(
                 "merchant",
                 "Unknown"
             )
-        ).strip()
+        ) or "Unknown"
 
-        if not merchant:
-            merchant = "Unknown"
+        paid_to = extract_paid_to(
+            transaction
+        )
 
-        # ----------------------------------------------------
+        # -------------------------------
         # AMOUNT
-        # ----------------------------------------------------
+        # -------------------------------
 
         try:
 
@@ -224,17 +215,18 @@ def save_new_transactions(transactions):
 
             amount = 0.0
 
-        # Ignore invalid/zero amounts
-
         if amount <= 0:
             continue
 
-        # ----------------------------------------------------
+        # -------------------------------
         # CATEGORY
-        # ----------------------------------------------------
+        # -------------------------------
 
-        category = transaction.get(
-            "category"
+        category = clean_value(
+            transaction.get(
+                "category",
+                ""
+            )
         )
 
         if not category:
@@ -244,20 +236,42 @@ def save_new_transactions(transactions):
                 amount
             )
 
-        # ----------------------------------------------------
+        # -------------------------------
         # DESCRIPTION
-        # ----------------------------------------------------
+        # -------------------------------
 
-        description = str(
+        description = clean_value(
             transaction.get(
                 "description",
                 ""
             )
-        ).strip()
+        )
 
-        # ----------------------------------------------------
+        # -------------------------------
+        # PAYMENT METHOD
+        # -------------------------------
+
+        payment_method = clean_value(
+            transaction.get(
+                "payment_method",
+                ""
+            )
+        )
+
+        # -------------------------------
+        # STATUS
+        # -------------------------------
+
+        status = clean_value(
+            transaction.get(
+                "status",
+                ""
+            )
+        )
+
+        # -------------------------------
         # DUPLICATE CHECK
-        # ----------------------------------------------------
+        # -------------------------------
 
         if transaction_exists(
             source,
@@ -265,12 +279,11 @@ def save_new_transactions(transactions):
         ):
 
             duplicate_count += 1
-
             continue
 
-        # ----------------------------------------------------
-        # SAVE
-        # ----------------------------------------------------
+        # -------------------------------
+        # SAVE PERMANENTLY
+        # -------------------------------
 
         saved = save_transaction(
 
@@ -278,15 +291,23 @@ def save_new_transactions(transactions):
 
             source_id=source_id,
 
+            transaction_id=transaction_id,
+
             date=date,
 
             merchant=merchant,
+
+            paid_to=paid_to,
 
             amount=amount,
 
             category=category,
 
-            description=description
+            description=description,
+
+            payment_method=payment_method,
+
+            status=status
         )
 
         if saved:
@@ -303,81 +324,22 @@ def save_new_transactions(transactions):
     )
 
 
-# ============================================================
-# BUILD DASHBOARD
-# ============================================================
-
 def build_dashboard_result():
-
-    # Make sure tables exist before querying.
-
     initialize_database()
 
-    # --------------------------------------------------------
-    # Statistics
-    # --------------------------------------------------------
-
     stats = get_dashboard_stats()
-
-    # --------------------------------------------------------
-    # Recent transactions
-    # --------------------------------------------------------
-
-    recent_rows = get_recent_transactions(
-        20
-    )
-
-    recent = []
-
-    for row in recent_rows:
-
-        recent.append({
-
-            "date": row[0],
-
-            "merchant": row[1],
-
-            "category": row[2],
-
-            "amount": row[3]
-
-        })
-
-    # --------------------------------------------------------
-    # Top merchants
-    # --------------------------------------------------------
-
+    transactions = get_all_transactions()
     merchants = get_top_merchants()
-
-    # --------------------------------------------------------
-    # Last update
-    # --------------------------------------------------------
-
     last_update = get_last_update()
 
-    # --------------------------------------------------------
-    # Return complete dashboard
-    # --------------------------------------------------------
-
     return {
-
         "stats": stats,
-
-        "recent": recent,
-
+        "transactions": transactions,
+        "recent": transactions[:20],
         "merchants": merchants,
-
-        "last_update": (
-            last_update
-            if last_update
-            else "-"
-        )
+        "last_update": last_update
     }
 
-
-# ============================================================
-# PROCESS ONE UPLOADED FILE
-# ============================================================
 
 def analyze_uploaded_file(file_path):
 
@@ -385,13 +347,8 @@ def analyze_uploaded_file(file_path):
 
     try:
 
-        # ----------------------------------------------------
-        # DATABASE
-        # ----------------------------------------------------
-
         initialize_database()
 
-        print()
         print("=" * 60)
         print("EXPENSE TRACKER")
         print("PROCESSING NEW FILE")
@@ -402,9 +359,9 @@ def analyze_uploaded_file(file_path):
             file_path
         )
 
-        # ----------------------------------------------------
+        # -------------------------------
         # READ FILE
-        # ----------------------------------------------------
+        # -------------------------------
 
         transactions = read_uploaded_file(
             file_path
@@ -415,21 +372,31 @@ def analyze_uploaded_file(file_path):
             len(transactions)
         )
 
-        # ----------------------------------------------------
+        # -------------------------------
         # CATEGORIZE
-        # ----------------------------------------------------
+        # -------------------------------
 
         for transaction in transactions:
 
-            merchant = transaction.get(
-                "merchant",
-                "Unknown"
-            )
+            merchant = clean_value(
+                transaction.get(
+                    "merchant",
+                    "Unknown"
+                )
+            ) or "Unknown"
 
-            amount = transaction.get(
-                "amount",
-                0
-            )
+            try:
+                amount = float(
+                    transaction.get(
+                        "amount",
+                        0
+                    )
+                )
+            except (
+                TypeError,
+                ValueError
+            ):
+                amount = 0
 
             transaction["category"] = (
                 categorize_transaction(
@@ -438,9 +405,16 @@ def analyze_uploaded_file(file_path):
                 )
             )
 
-        # ----------------------------------------------------
-        # SAVE NEW TRANSACTIONS
-        # ----------------------------------------------------
+            # Ensure paid_to exists
+            transaction["paid_to"] = (
+                extract_paid_to(
+                    transaction
+                )
+            )
+
+        # -------------------------------
+        # SAVE
+        # -------------------------------
 
         new_count, duplicate_count = (
             save_new_transactions(
@@ -448,15 +422,11 @@ def analyze_uploaded_file(file_path):
             )
         )
 
-        # ----------------------------------------------------
-        # FINISH TIME
-        # ----------------------------------------------------
-
         finished_at = datetime.now().isoformat()
 
-        # ----------------------------------------------------
+        # -------------------------------
         # SUCCESS LOG
-        # ----------------------------------------------------
+        # -------------------------------
 
         log_update(
 
@@ -470,10 +440,6 @@ def analyze_uploaded_file(file_path):
 
             error=""
         )
-
-        # ----------------------------------------------------
-        # LOG
-        # ----------------------------------------------------
 
         print(
             "NEW TRANSACTIONS:",
@@ -489,25 +455,19 @@ def analyze_uploaded_file(file_path):
             "Existing transactions were kept."
         )
 
-        print("=" * 60)
-
-        # ----------------------------------------------------
-        # BUILD COMPLETE DASHBOARD
-        # ----------------------------------------------------
+        # -------------------------------
+        # BUILD DASHBOARD FROM
+        # THE COMPLETE DATABASE
+        # -------------------------------
 
         result = build_dashboard_result()
 
-        # ----------------------------------------------------
-        # UPLOAD MESSAGE
-        # ----------------------------------------------------
-
         result["upload_message"] = (
-
-            f"Added {new_count} new transaction(s). "
-
-            f"Skipped {duplicate_count} duplicate(s). "
-
-            "Existing expenses were kept."
+            f"Added {new_count} new "
+            f"transaction(s). "
+            f"Skipped {duplicate_count} "
+            f"duplicate(s). "
+            f"Existing expenses were kept."
         )
 
         return result
@@ -515,10 +475,6 @@ def analyze_uploaded_file(file_path):
     except Exception as error:
 
         finished_at = datetime.now().isoformat()
-
-        # ----------------------------------------------------
-        # FAILED LOG
-        # ----------------------------------------------------
 
         try:
 
@@ -536,10 +492,8 @@ def analyze_uploaded_file(file_path):
             )
 
         except Exception:
-
             pass
 
-        print()
         print(
             "UPLOAD ERROR:",
             str(error)
@@ -548,32 +502,15 @@ def analyze_uploaded_file(file_path):
         raise
 
 
-# ============================================================
-# COMPATIBILITY FUNCTION
-# ============================================================
-
 def run_update():
 
-    """
-    Kept for compatibility with older code.
-
-    The current application processes files uploaded
-    through the Flask website.
-
-    It does NOT process a fixed Transactions.csv file.
-    """
-
     raise RuntimeError(
-
-        "run_update() is not used for uploaded files. "
-
-        "Please upload a CSV or PDF through the website."
+        "run_update() is not used for "
+        "uploaded files. "
+        "Please upload a CSV or PDF "
+        "through the website."
     )
 
-
-# ============================================================
-# TEST / DIRECT EXECUTION
-# ============================================================
 
 if __name__ == "__main__":
 
@@ -582,5 +519,6 @@ if __name__ == "__main__":
     )
 
     print(
-        "Use the Flask website to upload a CSV or PDF."
+        "Use the Flask website to upload "
+        "a CSV or PDF."
     )
